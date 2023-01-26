@@ -1,10 +1,12 @@
 const express = require("express");
-const morgan=require('morgan')
+const morgan = require("morgan");
+const cors = require("cors");
 
 const app = express();
-app.use(morgan('tiny'))
+app.use(morgan("tiny"));
+app.use(cors());
 
-app.use(express.json())
+app.use(express.json());
 
 let persons = [
   {
@@ -56,33 +58,31 @@ app.delete("/api/persons/:id", (request, response) => {
   response.status(204).end();
 });
 
-app.post('/api/persons',(request,response)=>{
-  const body=request.body
- if(!body.name){
-  return response.status(400).json({
-    error: 'Name missing'
-  })
- }
- else if(!body.number){
-  return response.status(400).json({
-    error: 'Number missing'
-  })
- }
-else if (persons.some(person=>person.name===body.name)){
-  return response.status(400).json({
-    error: 'Name already exist in the phonebook'
-  })
-}
+app.post("/api/persons", (request, response) => {
+  const body = request.body;
+  if (!body.name) {
+    return response.status(400).json({
+      error: "Name missing",
+    });
+  } else if (!body.number) {
+    return response.status(400).json({
+      error: "Number missing",
+    });
+  } else if (persons.some((person) => person.name === body.name)) {
+    return response.status(400).json({
+      error: "Name already exist in the phonebook",
+    });
+  }
 
-  idGenerate=Math.floor(Math.random() * 999999999999999999)
-  const person={
+  idGenerate = Math.floor(Math.random() * 999999999999999999);
+  const person = {
     id: idGenerate,
     name: body.name,
-    number: body.number   
-  }
-  persons=persons.concat(person)
-  response.json(person)
-})
+    number: body.number,
+  };
+  persons = persons.concat(person);
+  response.json(person);
+});
 
 const PORT = 3001;
 app.listen(PORT, () => {
