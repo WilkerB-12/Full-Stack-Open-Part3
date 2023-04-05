@@ -5,13 +5,25 @@ const cors = require("cors");
 const Person=require('./models/person');
 
 const app = express();
+
+const unknownEndpoint =(request,response)=>{
+  response.status(404).send({error:'unknown endpoint'})
+}
+
+const errorHandler=(error,request,response,next)=>{
+  console.error(error.message)
+
+  if (error.name == 'CastError') {
+    return response.status(400).send({error:'malformatted id'})
+  }
+  next(error)
+}
+
 app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.static('build'))
 
 app.use(express.json());
-
-
 
 
 let persons = [
@@ -50,7 +62,7 @@ app.get("/info", (request, response) => {
     <div>${date}</div>`);
 });
 
-app.get("/api/persons/:id", (request, response) => {
+app.get("/api/persons/:id", (request, response, next) => {
   const id = request.params.id;
   console.log(id);
   Person.findById(id).then(person=>{
@@ -59,13 +71,18 @@ app.get("/api/persons/:id", (request, response) => {
     } else {
       response.status(404).end();
     }
-  });
+  })
+  .catch(error=>next(error));
 });
 
+
 app.delete("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id);
-  persons = persons.filter((person) => person.id !== id);
-  response.status(204).end();
+  const id = request.params.id;
+  Person.findByIdAndRemove(id)
+  .then(result=>{
+    response.status(204).end()
+  })
+  .catch(error=>next(error))
 });
 
 app.post("/api/persons", (request, response) => {
@@ -84,7 +101,6 @@ app.post("/api/persons", (request, response) => {
       error: "Name already exist in the phonebook",
     });
   }
-
   const person = new Person({
     name: body.name,
     number: body.number,
@@ -93,6 +109,11 @@ app.post("/api/persons", (request, response) => {
   response.json(savedPerson)
  })
 });
+
+app.use(unknownEndpoint)
+
+app.use(errorHandler)
+
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
