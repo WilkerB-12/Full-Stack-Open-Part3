@@ -56,9 +56,12 @@ app.get("/api/persons", (request, response) => {
 
 app.get("/info", (request, response) => {
   let date = new Date();
+  Person.find({}).then((persons)=>{
   let numberPersons = persons.length;
   response.send(`<div>Phonebook has info for ${numberPersons} people</div>
-    <div>${date}</div>`);
+    <div>${date}</div>`);  
+  })
+  
 });
 
 app.get("/api/persons/:id", (request, response, next) => {
