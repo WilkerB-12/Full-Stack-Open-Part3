@@ -13,9 +13,12 @@ const unknownEndpoint = (request, response) => {
 const errorHandler = (error, request, response, next) => {
   console.error(error.message);
 
-  if (error.name == "CastError") {
+  if (error.name === "CastError") {
     return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message });
   }
+
   next(error);
 };
 
@@ -56,12 +59,11 @@ app.get("/api/persons", (request, response) => {
 
 app.get("/info", (request, response) => {
   let date = new Date();
-  Person.find({}).then((persons)=>{
-  let numberPersons = persons.length;
-  response.send(`<div>Phonebook has info for ${numberPersons} people</div>
-    <div>${date}</div>`);  
-  })
-  
+  Person.find({}).then((persons) => {
+    let numberPersons = persons.length;
+    response.send(`<div>Phonebook has info for ${numberPersons} people</div>
+    <div>${date}</div>`);
+  });
 });
 
 app.get("/api/persons/:id", (request, response, next) => {
@@ -87,30 +89,23 @@ app.delete("/api/persons/:id", (request, response) => {
     .catch((error) => next(error));
 });
 
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
-  if (!body.name) {
-    return response.status(400).json({
-      error: "Name missing",
-    });
-  } else if (!body.number) {
-    return response.status(400).json({
-      error: "Number missing",
-    });
-  }
+
   const person = new Person({
     name: body.name,
     number: body.number,
   });
+
   Person.findOne({ name: body.name }).then((result) => {
     if (!result) {
-      console.log(result)
-      console.log("salvado")
-      person.save().then((savedPerson) => {
-        response.json(savedPerson);
-      });
-    } else {  
-      console.log("persona ya creada");
+      person
+        .save()
+        .then((savedPerson) => {
+          response.json(savedPerson);
+        })
+        .catch((error) => next(error));
+    } else {
       response.status(200).json({ error: "Persona ya existe" });
     }
   });
@@ -118,25 +113,16 @@ app.post("/api/persons", (request, response) => {
 
 app.put("/api/persons/:id", (request, response) => {
   const body = request.body;
-  if (!body.name) {
-    return response.status(400).json({
-      error: "Name missing",
-    });
-  } else if (!body.number) {
-    return response.status(400).json({
-      error: "Number missing",
-    });
-  }
   const person = {
     name: body.name,
     number: body.number,
   };
-  Person.findByIdAndUpdate(request.params.id, person, {new: true})
-    .then(updatedNote=>{
-      response.json(updatedNote)
+  Person.findByIdAndUpdate(request.params.id, person, { new: true,runValidators:true, context:'query'})
+    .then((updatedNote) => {
+      response.json(updatedNote);
     })
-    .catch(error=>next(error))
-  });
+    .catch((error) => next(error));
+});
 
 app.use(unknownEndpoint);
 
